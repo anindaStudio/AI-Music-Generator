@@ -1,5 +1,5 @@
 import streamlit as st
-from music21 import stream, note, chord
+from music21 import stream, note, chord, instrument
 import random
 import time
 
@@ -9,16 +9,9 @@ st.set_page_config(page_title="AI Music Generator", page_icon="🎵", layout="ce
 # 🎨 Custom CSS
 st.markdown("""
 <style>
-body {
-    background-color: #0e1117;
-}
-.main {
-    background-color: #0e1117;
-}
-h1 {
-    text-align: center;
-    color: #00ffd5;
-}
+body { background-color: #0e1117; }
+.main { background-color: #0e1117; }
+h1 { text-align: center; color: #00ffd5; }
 .stButton>button {
     background-color: #00ffd5;
     color: black;
@@ -48,7 +41,7 @@ st.markdown("<p style='text-align:center;color:gray;'>Create music with your moo
 st.markdown("<div class='card'>", unsafe_allow_html=True)
 
 mood = st.selectbox("🎭 Select Mood", ["happy", "sad", "chill", "energetic", "romantic"])
-instrument = st.selectbox("🎸 Select Instrument", ["piano", "guitar", "flute"])
+instrument_choice = st.selectbox("🎸 Select Instrument", ["piano", "guitar", "flute"])
 length = st.slider("🎚️ Music Length", 50, 300, 120)
 
 st.markdown("</div>", unsafe_allow_html=True)
@@ -57,6 +50,7 @@ st.markdown("</div>", unsafe_allow_html=True)
 if st.button("🚀 Generate Music"):
     with st.spinner("Creating your vibe... 🎧"):
 
+        # 🎯 Mood notes
         if mood == "happy":
             notes_list = ['C4','E4','G4','A4']
         elif mood == "sad":
@@ -68,6 +62,14 @@ if st.button("🚀 Generate Music"):
         elif mood == "romantic":
             notes_list = ['C4','E4','F4','A4']
 
+        # 🎸 Instrument mapping
+        if instrument_choice == "piano":
+            selected_instrument = instrument.Piano()
+        elif instrument_choice == "guitar":
+            selected_instrument = instrument.Guitar()
+        elif instrument_choice == "flute":
+            selected_instrument = instrument.Flute()
+
         output_notes = []
         offset = 0
 
@@ -76,10 +78,12 @@ if st.button("🚀 Generate Music"):
                 chord_notes = [random.choice(notes_list) for _ in range(3)]
                 new_chord = chord.Chord(chord_notes)
                 new_chord.offset = offset
+                new_chord.storedInstrument = selected_instrument
                 output_notes.append(new_chord)
             else:
                 new_note = note.Note(random.choice(notes_list))
                 new_note.offset = offset
+                new_note.storedInstrument = selected_instrument
                 output_notes.append(new_note)
 
             offset += 0.5
@@ -88,7 +92,7 @@ if st.button("🚀 Generate Music"):
         midi_stream = stream.Stream(output_notes)
         midi_stream.write('midi', fp=filename)
 
-        st.success(f"🎶 {mood.capitalize()} music ready!")
+        st.success(f"🎶 {mood.capitalize()} music ready! ({instrument_choice})")
 
         st.audio(filename)
 

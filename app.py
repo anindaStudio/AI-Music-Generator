@@ -3,30 +3,70 @@ from music21 import stream, note, chord
 import random
 import time
 
-st.set_page_config(page_title="AI Music Generator")
+# 🎨 Page config
+st.set_page_config(page_title="AI Music Generator", page_icon="🎵", layout="centered")
 
-st.title("🎵 AI Music Generator")
-st.write("Create music with your choice 🎶")
+# 🎨 Custom CSS
+st.markdown("""
+<style>
+body {
+    background-color: #0e1117;
+}
+.main {
+    background-color: #0e1117;
+}
+h1 {
+    text-align: center;
+    color: #00ffd5;
+}
+.stButton>button {
+    background-color: #00ffd5;
+    color: black;
+    font-weight: bold;
+    border-radius: 10px;
+    padding: 10px 20px;
+}
+.stButton>button:hover {
+    background-color: #00c9a7;
+    color: white;
+}
+.card {
+    padding: 20px;
+    border-radius: 15px;
+    background-color: #1c1f26;
+    box-shadow: 0px 0px 10px rgba(0,255,213,0.2);
+    margin-bottom: 20px;
+}
+</style>
+""", unsafe_allow_html=True)
 
-# 🎯 NEW: Mood selection
-mood = st.selectbox("Select Mood", ["happy", "sad", "chill"])
+# 🎵 Title
+st.markdown("<h1>🎵 AI Music Generator</h1>", unsafe_allow_html=True)
+st.markdown("<p style='text-align:center;color:gray;'>Create music with your mood 🎶</p>", unsafe_allow_html=True)
 
-# 🎯 NEW: Instrument selection (UI only for now)
-instrument = st.selectbox("Select Instrument", ["piano", "guitar", "flute"])
+# 📦 Card UI
+st.markdown("<div class='card'>", unsafe_allow_html=True)
 
-# 🎯 Length
-length = st.slider("Music Length", 50, 300, 100)
+mood = st.selectbox("🎭 Select Mood", ["happy", "sad", "chill", "energetic", "romantic"])
+instrument = st.selectbox("🎸 Select Instrument", ["piano", "guitar", "flute"])
+length = st.slider("🎚️ Music Length", 50, 300, 120)
 
-if st.button("Generate Music 🎶"):
-    with st.spinner("Generating... ⏳"):
+st.markdown("</div>", unsafe_allow_html=True)
 
-        # 🎯 Mood based notes
+# 🚀 Generate button
+if st.button("🚀 Generate Music"):
+    with st.spinner("Creating your vibe... 🎧"):
+
         if mood == "happy":
             notes_list = ['C4','E4','G4','A4']
         elif mood == "sad":
             notes_list = ['C4','D#4','G4','A#4']
-        else:
+        elif mood == "chill":
             notes_list = ['C4','D4','F4','G4']
+        elif mood == "energetic":
+            notes_list = ['C4','E4','G4','B4','D5']
+        elif mood == "romantic":
+            notes_list = ['C4','E4','F4','A4']
 
         output_notes = []
         offset = 0
@@ -48,7 +88,7 @@ if st.button("Generate Music 🎶"):
         midi_stream = stream.Stream(output_notes)
         midi_stream.write('midi', fp=filename)
 
-        st.success(f"🎶 Music Generated! ({mood} mood, {instrument})")
+        st.success(f"🎶 {mood.capitalize()} music ready!")
 
         st.audio(filename)
 

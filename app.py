@@ -1,117 +1,49 @@
 import streamlit as st
-from music21 import instrument, note, stream, chord, converter
-import numpy as np
-import tensorflow as tf
-import glob
+from music21 import stream, note, chord
 import random
+import time
 
 st.set_page_config(page_title="AI Music Generator")
 
-st.title("🎵 AI Music Generator")
-st.write("Generate music using AI (LSTM)")
-
-# 🔥 FIX 1: Sampling function (variation)
-def sample(preds, temperature=0.8):
-    preds = np.asarray(preds).astype('float64')
-    preds = np.log(preds + 1e-8) / temperature
-    exp_preds = np.exp(preds)
-    preds = exp_preds / np.sum(exp_preds)
-    return np.random.choice(len(preds), p=preds)
-
-# 🔥 FIX 2: Cache model (speed up)
-@st.cache_resource
-def load_model():
-    return tf.keras.models.load_model("music_model.h5")
-
-model = load_model()
+st.title("🎵 AI Music Generator (Demo)")
+st.write("Generate simple music 🎶")
 
 # UI
-mood = st.selectbox("Select Mood", ["happy", "sad", "chill", "energetic", "romantic"])
-length = st.slider("Music Length", 100, 500, 300)
+length = st.slider("Music Length", 50, 300, 100)
 
 if st.button("Generate Music 🎶"):
-    st.info("Generating... ⏳")
+    with st.spinner("Generating... ⏳"):
 
-    notes = []
+        notes_list = ['C4','D4','E4','F4','G4','A4','B4']
 
-    # Load dataset
-    for file in glob.glob("dataset/*.mid"):
-        midi = converter.parse(file)
+        output_notes = []
+        offset = 0
 
-        parts = instrument.partitionByInstrument(midi)
-        if parts:
-            notes_to_parse = parts.parts[0].recurse()
-        else:
-            notes_to_parse = midi.flat.notes
+        for i in range(length):
+            if random.random() < 0.3:
+                # chord
+                chord_notes = [random.choice(notes_list) for _ in range(3)]
+                new_chord = chord.Chord(chord_notes)
+                new_chord.offset = offset
+                output_notes.append(new_chord)
+            else:
+                # single note
+                new_note = note.Note(random.choice(notes_list))
+                new_note.offset = offset
+                output_notes.append(new_note)
 
-        for element in notes_to_parse:
-            if isinstance(element, note.Note):
-                notes.append(str(element.pitch))
-            elif isinstance(element, chord.Chord):
-                notes.append('.'.join(str(n) for n in element.normalOrder))
+            offset += 0.5
 
-    pitchnames = sorted(set(notes))
-    n_vocab = len(pitchnames)
+        # save file
+        filename = f"music_{int(time.time())}.mid"
+        midi_stream = stream.Stream(output_notes)
+        midi_stream.write('midi', fp=filename)
 
-    note_to_int = dict((note, number) for number, note in enumerate(pitchnames))
-    int_to_note = dict((number, note) for number, note in enumerate(pitchnames))
+        st.success("🎶 Music Generated!")
 
-    sequence_length = 50
-    network_input = []
+        # play
+        st.audio(filename)
 
-    for i in range(0, len(notes) - sequence_length):
-        sequence_in = notes[i:i + sequence_length]
-        network_input.append([note_to_int[char] for char in sequence_in])
-
-    # 🔥 FIX 3: Random seed
-    pattern = random.choice(network_input)
-
-    prediction_output = []
-
-    for note_index in range(length):
-        prediction_input = np.reshape(pattern, (1, len(pattern), 1))
-        prediction_input = prediction_input / float(n_vocab)
-
-        prediction = model.predict(prediction_input, verbose=0)
-
-        # 🔥 FIX 4: Random sampling (MAIN FIX)
-        index = sample(prediction[0], temperature=0.8)
-        result = int_to_note[index]
-
-        prediction_output.append(result)
-
-        pattern.append(index)
-        pattern = pattern[1:]
-
-    # Convert to MIDI
-    offset = 0
-    output_notes = []
-
-    for pattern in prediction_output:
-        if ('.' in pattern) or pattern.isdigit():
-            notes_in_chord = pattern.split('.')
-            notes_list = []
-            for n in notes_in_chord:
-                new_note = note.Note(int(n))
-                new_note.storedInstrument = instrument.Piano()
-                notes_list.append(new_note)
-            new_chord = chord.Chord(notes_list)
-            new_chord.offset = offset
-            output_notes.append(new_chord)
-        else:
-            new_note = note.Note(pattern)
-            new_note.offset = offset
-            new_note.storedInstrument = instrument.Piano()
-            output_notes.append(new_note)
-
-        offset += 0.5
-
-    midi_stream = stream.Stream(output_notes)
-    midi_stream.write('midi', fp='ai_output.mid')
-
-    st.success("🎶 Music Generated!")
-
-    st.audio("ai_output.mid")
-
-    with open("ai_output.mid", "rb") as f:
-        st.download_button("⬇️ Download Music", f, file_name="ai_music.mid")
+        # download
+        with open(filename, "rb") as f:
+            st.download_button("⬇️ Download Music", f, file_name="music.mid")
